@@ -1,6 +1,7 @@
-venv
+.venv
 __pycache__
 pretrained_models
 tracks
 datasets
 .vscode
+.rsyncignore
