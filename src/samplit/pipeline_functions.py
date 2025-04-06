@@ -1,5 +1,5 @@
 from data.strings import *
-# from .data.utils import time_it
+from data.utils import time_it
 import os
 import re
 import json
@@ -11,7 +11,6 @@ from spleeter.separator import Separator
 import whisper
 from phonemizer import phonemize
 import Levenshtein
-# import streamlit as st
 
 
 def separate_all_tracks(audio_path: str) -> dict[str,str]:
@@ -441,47 +440,52 @@ def full_instruments_ffmpeg_cut(
   return out_track_name
   
 
-# TODO move in streamlit file
-# def streamlit_pipeline(
-#     track: str, 
-#     # queries: list[str],
-#     query: str,
-#     k: int = 3,
-# ):
-#   """
-#   TODO for now only a single query, maybe multi query in background
-#   """
+def terminal_pipeline(
+    track: str, 
+    # queries: list[str],
+    query: str,
+    k: int = 3,
+):
+  """
+  TODO for now only a single query, maybe multi query in background
+  """
 
-#   with time_it("Audio Separation..."):
-#     with st.spinner("Audio Separation..."):
-#       track_names: dict[str,str] = separate_all_tracks(track)
+  with time_it("Audio Separation..."):
+    track_names: dict[str,str] = separate_all_tracks(track)
 
-#   with time_it("Transcription..."):
-#     with st.spinner("Transcription..."):
-#       transcribed_dict = transcribe_with_timestamps_whisper(track_names["vocals for transcription"])
+  with time_it("Transcription..."):
+    transcribed_dict = transcribe_with_timestamps_whisper(track_names["vocals for transcription"])
 
-#   with time_it("Chunking..."):
-#     with st.spinner("Chunking..."):
-#       start_times, end_times, transcriptions = k_best_chunks_with_phonetic_embeddings(
-#         track_names["vocals"], 
-#         [query], 
-#         k,
-#         transcribed_dict
-#       )
+  with time_it("Chunking..."):
+    start_times, end_times, transcriptions = k_best_chunks_with_phonetic_embeddings(
+      track_names["vocals"], 
+      [query], 
+      k,
+      transcribed_dict
+    )
 
-#   with time_it("Final ffmpeg cut"):
-#     with st.spinner("Final audio cut..."):
-#       top_extracted_cuts: list[str] = [""]*(k)
-#       for i in range(k):
-#         top_extracted_cuts[i] = full_instruments_ffmpeg_cut(
-#           start_times[0,i],
-#           end_times[0,i],
-#           track_names,
-#           query,
-#           i+1,
-#           selections,
-#         )
+  # just for this use extract from original audio track
+  selections: dict[str,bool] = {
+    "original": True,
+    "vocals": False,
+    "piano": False,
+    "drums": False,
+    "bass": False,
+    "other": False,
+  } 
 
-#   # doing this only for streamlit ui
-#   start_end_times = list(zip(start_times[0,:], end_times[0,:]))
-#   return track_names, top_extracted_cuts, start_end_times, transcriptions[0,:]
+  with time_it("Final ffmpeg cut"):
+    top_extracted_cuts: list[str] = [""]*(k)
+    for i in range(k):
+      top_extracted_cuts[i] = full_instruments_ffmpeg_cut(
+        start_times[0,i],
+        end_times[0,i],
+        track_names,
+        query,
+        i+1,
+        selections,
+      )
+
+  # doing this only for streamlit ui
+  start_end_times = list(zip(start_times[0,:], end_times[0,:]))
+  return track_names, top_extracted_cuts, start_end_times, transcriptions[0,:]
