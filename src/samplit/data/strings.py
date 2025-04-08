@@ -8,12 +8,8 @@ SEPARATED_TRACKS_PATH: str = os.path.join(TRACKS_PATH, "separated_tracks")
 SLICES_FOLDER: str = os.path.join(TRACKS_PATH, "extracted_slices")
 JSON_SAVES: str = os.path.join(MODELS_PATH, "json_saved_transcriptions")
 CACHE_SENTENCE_TRANSFORMERS: str = os.path.join(MODELS_PATH, "hugging_face")
-
-# TODO verificare se ci siano da aggiungere altre linee di codice per 
-# spostare altro sul device (non l'ho provato :)
 DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
 WHISPER_MODEL: str = "medium"  # scegli tra tiny, base, small, medium, large
-
 
 
 # create folders
@@ -29,6 +25,55 @@ if not os.path.exists(JSON_SAVES):
   os.mkdir(JSON_SAVES)
 
 
+DATASETS_FOLDER: str = "datasets"
+"""
+datasets folder path
+"""
+
+# jamendo dataset strings
+JAMENDO_FOLDER: str = os.path.join(DATASETS_FOLDER,"jamendo_dataset")
+"""
+jamendo dataset folder path
+"""
+J_LYRICS_CSV: str = os.path.join(JAMENDO_FOLDER, "JamendoLyrics.csv")
+"""
+path to the csv file with all the song information
+"""
+J_MP3_FOLDER: str = os.path.join(JAMENDO_FOLDER, "mp3")
+"""
+path to the folder with all the jamendo mp3 files
+"""
+J_LINES_FOLDER: str = os.path.join(JAMENDO_FOLDER, "annotations", "lines")
+"""
+path to the folder with all the jamendo queries
+"""
+J_TEMP_CUTS_FOLDER: str = os.path.join(JAMENDO_FOLDER,"temp_cuts")
+"""
+path to the folder with all the jamendo temporary cuts
+"""
+if not os.path.exists(J_TEMP_CUTS_FOLDER):
+  os.mkdir(J_TEMP_CUTS_FOLDER)
+J_MODEL_LINES: str = os.path.join(JAMENDO_FOLDER, "model_lines")
+"""
+path to the folder with all the custom lines files with model answers
+"""
+if not os.path.exists(J_LINES_FOLDER):
+  os.mkdir(J_LINES_FOLDER)
+J_LYRICS_FOLDER: str = os.path.join(JAMENDO_FOLDER, "lyrics")
+"""
+path to the folder with all the jamendo lyrics
+"""
+J_WORDS_FOLDER: str = os.path.join(JAMENDO_FOLDER, "annotations", "words")
+"""
+path to the folder with all the jamendo words start and end times
+"""
+J_CUSTOM_LINES_FOLDER: str = os.path.join(JAMENDO_FOLDER, "annotations", "custom_lines")
+"""
+path to the folder with all the custom lines
+"""
+if not os.path.exists(J_CUSTOM_LINES_FOLDER):
+  os.mkdir(J_CUSTOM_LINES_FOLDER)
+MAX_CHAR_NUM: int = 1_000_000
 
 
 

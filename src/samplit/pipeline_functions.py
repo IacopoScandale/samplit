@@ -11,6 +11,7 @@ from spleeter.separator import Separator
 import whisper
 from phonemizer import phonemize
 import Levenshtein
+import pandas as pd
 
 
 def separate_all_tracks(audio_path: str) -> dict[str,str]:
@@ -489,3 +490,44 @@ def terminal_pipeline(
   # doing this only for streamlit ui
   start_end_times = list(zip(start_times[0,:], end_times[0,:]))
   return track_names, top_extracted_cuts, start_end_times, transcriptions[0,:]
+
+
+def jamendo_model_answer_pipeline(
+    track_path: str,
+    lines_csv_path: str, 
+    # lines_df: pd.DataFrame,
+    # queries: list[str],
+    k: int = 1,
+):
+  """
+  cfr src/samplit/create_jamendo_model_answers.py
+  """
+  track_name_no_ext = os.path.basename(os.path.splitext(track_path)[0])
+  # lines_df = pd.read_csv(os.path.join(lines, f"{track_name_no_ext}.csv"))
+  lines_csv_filename = os.path.basename(lines_csv_path)
+  
+  lines_df = pd.read_csv(lines_csv_path)
+
+  with time_it("Audio Separation..."):
+    track_names: dict[str,str] = separate_all_tracks(track_path)
+
+  with time_it("Transcription..."):
+    transcribed_dict = transcribe_with_timestamps_whisper(track_names["vocals for transcription"])
+
+  queries: list[str] = lines_df["lyrics_line"].tolist()
+
+  with time_it("Chunking..."):
+    # with st.spinner("Chunking..."):
+    start_times, end_times, transcriptions = k_best_chunks_with_phonetic_embeddings(
+      track_names["vocals"], 
+      queries, 
+      k,
+      transcribed_dict
+    )
+
+  lines_df["model_start_time"] = start_times[:,0]
+  lines_df["model_end_time"] = end_times[:,0]
+  lines_df["model_transcription"] = transcriptions[:,0]
+  # out_csv = os.path.join(model_lines,f"{track_name_no_ext}_pipeline.csv")
+  out_csv: str = os.path.join(J_MODEL_LINES, track_name_no_ext, lines_csv_filename)
+  lines_df.to_csv(out_csv, index=False)
