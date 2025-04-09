@@ -51,14 +51,10 @@ J_TEMP_CUTS_FOLDER: str = os.path.join(JAMENDO_FOLDER,"temp_cuts")
 """
 path to the folder with all the jamendo temporary cuts
 """
-if not os.path.exists(J_TEMP_CUTS_FOLDER):
-  os.mkdir(J_TEMP_CUTS_FOLDER)
 J_MODEL_LINES: str = os.path.join(JAMENDO_FOLDER, "model_lines")
 """
 path to the folder with all the custom lines files with model answers
 """
-if not os.path.exists(J_LINES_FOLDER):
-  os.mkdir(J_LINES_FOLDER)
 J_LYRICS_FOLDER: str = os.path.join(JAMENDO_FOLDER, "lyrics")
 """
 path to the folder with all the jamendo lyrics
@@ -71,11 +67,17 @@ J_CUSTOM_LINES_FOLDER: str = os.path.join(JAMENDO_FOLDER, "annotations", "custom
 """
 path to the folder with all the custom lines
 """
-if not os.path.exists(J_CUSTOM_LINES_FOLDER):
-  os.mkdir(J_CUSTOM_LINES_FOLDER)
+# create jamendo custom folders only if dataset folder is present
+if os.path.exists(J_LINES_FOLDER):
+  if not os.path.exists(J_TEMP_CUTS_FOLDER):
+    os.mkdir(J_TEMP_CUTS_FOLDER)
+  if not os.path.exists(J_LINES_FOLDER):
+    os.mkdir(J_LINES_FOLDER)
+  if not os.path.exists(J_CUSTOM_LINES_FOLDER):
+    os.mkdir(J_CUSTOM_LINES_FOLDER)
+
+
 MAX_CHAR_NUM: int = 1_000_000
-
-
 
 
 WHISPER_TO_ESPEAK_LAN: dict[str, str] = {

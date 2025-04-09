@@ -1,0 +1,2 @@
+[server]
+fileWatcherType = "none"  # disable pytorch classes none error
