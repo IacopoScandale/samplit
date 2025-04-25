@@ -1,15 +1,21 @@
 import os
-import torch
+from torch.cuda import is_available
 
-# folders
+
 MODELS_PATH: str = "pretrained_models"  # uso questo solo perché è il default di spleeter con tensorflow
 TRACKS_PATH: str = "tracks"
 SEPARATED_TRACKS_PATH: str = os.path.join(TRACKS_PATH, "separated_tracks")
 SLICES_FOLDER: str = os.path.join(TRACKS_PATH, "extracted_slices")
 JSON_SAVES: str = os.path.join(MODELS_PATH, "json_saved_transcriptions")
 CACHE_SENTENCE_TRANSFORMERS: str = os.path.join(MODELS_PATH, "hugging_face")
-DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE: str = "cuda" if is_available() else "cpu"
 WHISPER_MODEL: str = "medium"  # scegli tra tiny, base, small, medium, large
+PHONEMIZE_BACKEND: str = "espeak"
+SPLEETER_MODEL: str = "spleeter:5stems"
+PLOTS_FOLDER: str = "plots"
+# SNS_PALETTE: str = "pastel"
+SNS_PALETTE: str = "Set2"
+TITLE_FONTSIZE: int = 16
 
 
 # create folders
@@ -23,6 +29,8 @@ if not os.path.exists(MODELS_PATH):
   os.mkdir(MODELS_PATH)
 if not os.path.exists(JSON_SAVES):
   os.mkdir(JSON_SAVES)
+if not os.path.exists(PLOTS_FOLDER):
+  os.mkdir(PLOTS_FOLDER)
 
 
 DATASETS_FOLDER: str = "datasets"
@@ -66,6 +74,11 @@ path to the folder with all the jamendo words start and end times
 J_CUSTOM_LINES_FOLDER: str = os.path.join(JAMENDO_FOLDER, "annotations", "custom_lines")
 """
 path to the folder with all the custom lines
+"""
+J_DATAFRAME_CSV: str = os.path.join(JAMENDO_FOLDER, "jamendo_final_df.csv")
+"""
+path to the jamendo dataframe with all info and model answers, ready to
+make plots
 """
 # create jamendo custom folders only if dataset folder is present
 if os.path.exists(J_LINES_FOLDER):

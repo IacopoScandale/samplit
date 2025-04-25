@@ -3,21 +3,21 @@ import os
 import time
 from contextlib import contextmanager
 import pandas as pd
-
+from tqdm import tqdm
 
 # only to time pipeline functions within terminal
 @contextmanager
-def time_it(description: str):
-  print(f"\n{description}")
+def time_it(description: str | None = None):
+  if description:
+    tqdm.write(f"{description}")
   start_time = time.time()  # Start timer
   yield  # Qui viene eseguito il codice all'interno del blocco `with`
   end_time = time.time()  # End timer
   execution_time = end_time - start_time
   if execution_time < 60:
-    print(f"\n  done! ({execution_time:.4f} sec)\n")
+    tqdm.write(f"  done! ({execution_time:.4f} sec)\n")
   else:
-    print(f"\n  done! ({execution_time/60:.1f} min)\n")
-
+    tqdm.write(f"  done! ({execution_time/60:.1f} min)\n")
 
 
 # jamendo dataset utils
@@ -82,3 +82,26 @@ def get_j_lyrics_filepath(track_name: str) -> str:
   get the path to the lyrics file for the given track name
   """
   return os.path.join(J_LYRICS_FOLDER, f"{os.path.splitext(track_name)[0]}.txt")
+
+def create_jamendo_dataframe() -> None:
+  """
+  Merges all dataframes in `J_MODEL_LINES` folders
+  """
+  dataframes: list[pd.DataFrame] = []
+  for track_folder in os.listdir(J_MODEL_LINES):
+    folder_path: str = os.path.join(J_MODEL_LINES, track_folder)
+    for csv_file in os.listdir(folder_path):
+      csv_path: str = os.path.join(folder_path, csv_file)
+      cur_df = pd.read_csv(csv_path, index_col=False)
+      dataframes.append(cur_df)
+  
+  merged_df = pd.concat(dataframes, ignore_index=True)
+  merged_df.to_csv(J_DATAFRAME_CSV, index=False)
+
+def load_jamendo_dataframe() -> pd.DataFrame:
+  if os.path.exists(J_DATAFRAME_CSV):
+    df: pd.DataFrame = pd.read_csv(J_DATAFRAME_CSV)
+    df["start_error"] = abs(df["start_time"] - df["model_start_time"])
+    df["end_error"] = abs(df["end_time"] - df["model_end_time"])
+    df["avg_error"] = (df["start_error"] + df["end_error"]) / 2
+    return df

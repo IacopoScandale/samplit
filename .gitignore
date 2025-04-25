@@ -5,4 +5,4 @@ tracks
 datasets
 .vscode
 .rsyncignore
-prova.py
+prova*

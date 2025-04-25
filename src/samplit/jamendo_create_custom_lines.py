@@ -32,6 +32,8 @@ def generate_j_unique_lines_df(
 
   uses `sys.exit()` when there are no lines to extract
   """
+  metadata: pd.DataFrame = pd.read_csv(J_LYRICS_CSV)
+  track_language: str = metadata[metadata["Filepath"]==track_name]["Language"].iloc[0]
 
   words_df = get_j_words_df(track_name)
   num_lyrics: int = len(words_df)
@@ -82,43 +84,52 @@ def generate_j_unique_lines_df(
   # export csv
   # lines_df = lines_df.drop_duplicates()
   lines_df = lines_df.dropna()
+  lines_df["track_name"] = track_name
+  lines_df["num_words"] = num_words
+  lines_df["min_char_num"] = min_char_num if min_char_num != 1 else None
+  lines_df["max_char_num"] = max_char_num if max_char_num != MAX_CHAR_NUM else None
+  lines_df["language"] = track_language
+
   lines_df.to_csv(
     get_j_custom_lines_filepath(
       track_name, 
       len(lines_df), 
       num_words, 
       min_char_num, max_char_num
-      ),
-      index=False,
-    )
+    ),
+    index=False,
+  )
   return lines_df
 
 
+def main() -> None:
+  # (num_lines, num_words, min_char_num, max_char_num)
+  choices_for_every_track = [
+    (40, 10, 1, MAX_CHAR_NUM),
+    (40, 9, 1, MAX_CHAR_NUM),
+    (40, 8, 1, MAX_CHAR_NUM),
+    (40, 7, 1, MAX_CHAR_NUM),
+    (40, 6, 1, MAX_CHAR_NUM),
+    (40, 5, 1, MAX_CHAR_NUM),
+    (40, 4, 1, MAX_CHAR_NUM),
+    (40, 3, 1, MAX_CHAR_NUM),
+    (40, 2, 1, MAX_CHAR_NUM),
+    (40, 1, 1, MAX_CHAR_NUM),
+
+    (40, 2, 1, 10),
+    (40, 2, 10, MAX_CHAR_NUM),
+
+    (40, 1, 1, 5),
+    (40, 1, 5, 10),
+  ]
+
+  # create custom slices for every track
+  for track_name in tqdm(os.listdir(J_MP3_FOLDER), desc="Processing mp3 files"):
+    
+    # for args in tqdm(choices_for_every_track, desc=f'Processing track "{track_name}"'):
+    for args in choices_for_every_track:
+      generate_j_unique_lines_df(track_name, *args)
 
 
-# (num_lines, num_words, min_char_num, max_char_num)
-choices_for_every_track = [
-  (40, 10, 1, MAX_CHAR_NUM),
-  (40, 9, 1, MAX_CHAR_NUM),
-  (40, 8, 1, MAX_CHAR_NUM),
-  (40, 7, 1, MAX_CHAR_NUM),
-  (40, 6, 1, MAX_CHAR_NUM),
-  (40, 5, 1, MAX_CHAR_NUM),
-  (40, 4, 1, MAX_CHAR_NUM),
-  (40, 3, 1, MAX_CHAR_NUM),
-  (40, 2, 1, MAX_CHAR_NUM),
-  (40, 1, 1, MAX_CHAR_NUM),
-
-  (40, 2, 1, 10),
-  (40, 2, 10, MAX_CHAR_NUM),
-
-  (40, 1, 1, 5),
-  (40, 1, 5, 10),
-]
-
-# create custom slices for every track
-for track_name in tqdm(os.listdir(J_MP3_FOLDER), desc="Processing mp3 files"):
-  
-  # for args in tqdm(choices_for_every_track, desc=f'Processing track "{track_name}"'):
-  for args in choices_for_every_track:
-    generate_j_unique_lines_df(track_name, *args)
+if __name__ == "__main__":
+  main()

@@ -12,9 +12,13 @@ import whisper
 from phonemizer import phonemize
 import Levenshtein
 import pandas as pd
+import torch
 
 
-def separate_all_tracks(audio_path: str) -> dict[str,str]:
+def separate_all_tracks(
+  audio_path: str, 
+  spleeter_model: Separator | None = None,
+) -> dict[str,str]:
   """
   Scarica il modello di spleeter (5 stems) se necessario.
   
@@ -54,9 +58,11 @@ def separate_all_tracks(audio_path: str) -> dict[str,str]:
   separated_track_folder = os.path.join(SEPARATED_TRACKS_PATH, fname)
 
   if not os.path.exists(separated_track_folder):
-    # spleeter to separate audio voice from instruments
-    separator: Separator = Separator("spleeter:5stems")
-    separator.separate_to_file(audio_path, SEPARATED_TRACKS_PATH)
+    # load spleeter model if not passed as argument
+    if not spleeter_model:
+      # spleeter to separate audio voice from instruments
+      spleeter_model: Separator = Separator(SPLEETER_MODEL)
+    spleeter_model.separate_to_file(audio_path, SEPARATED_TRACKS_PATH)
 
   vocals_for_transcription = os.path.join(separated_track_folder, "vocals_for_transcription.wav")
   vocals = os.path.join(separated_track_folder, "vocals.wav")
@@ -154,15 +160,23 @@ def transcribe_with_timestamps_whisper(
       transcribed_dict = json.load(jsonfile)
     return transcribed_dict
   
-
   model = whisper.load_model(
     WHISPER_MODEL, 
     device=DEVICE, 
     download_root=MODELS_PATH
   )
-  dict_res = model.transcribe(file_path, word_timestamps=True)
+  # just because it does not fit in my gpu, otherwise autocast does it 
+  # all automatically
+  model = model.half() if DEVICE=="cuda" else model
+  
+  with torch.autocast(device_type=DEVICE, enabled=DEVICE=="cuda"):
+    dict_res = model.transcribe(file_path, word_timestamps=True)
 
-  # remove words with too short duration
+  # remove words with too short duration FIXME? maybe there is no need 
+  # thanks to model probability, and consider removing it especially 
+  # because it removes words and queries lose a word
+  # TODO then if the output is that word and it is very short consider 
+  # padding one second more to the left and right before exporting it
   duration_tol: float = 0.20
   dict_res["result"] = [word for segment in dict_res["segments"] for word in segment["words"] if word["end"]-word["start"] > duration_tol]
   dict_res["text"] = " ".join(word_dict["word"] for word_dict in dict_res["result"])
@@ -208,6 +222,9 @@ def k_best_chunks_with_phonetic_embeddings(
     queries: list[str],
     k: int,
     transcribed_dict: dict | None = None,
+    # embedding_model: SentenceTransformer | None = None,
+    # tmp_dir: str | None = None,
+    verbose: bool = True,
 # ) -> tuple[list[float],list[float]]:
 ) -> tuple[np.ndarray, np.ndarray]:
   """
@@ -248,7 +265,11 @@ def k_best_chunks_with_phonetic_embeddings(
          [17.2, 47.5],  # End times for "you"
          [7.5, 42.0]])  # End times for "hello"
   """
-  
+
+  # put espeak-ng tmp files in a temporary directory  
+  # if tmp_dir:
+    # os.environ["TMPDIR"] = tmp_dir
+
   # save some time
   if not transcribed_dict:
     transcription_json = track_name_to_json_transcription(wav_path)
@@ -260,12 +281,13 @@ def k_best_chunks_with_phonetic_embeddings(
 
   whisper_lan: str = transcribed_dict["language"]
   espeak_lan: str = WHISPER_TO_ESPEAK_LAN[whisper_lan]
-  # language: str = "en-us"
-  print(f"{whisper_lan = }")
-  print(f"{espeak_lan = }")
+  if verbose:
+    print(f"{whisper_lan = }")
+    print(f"{espeak_lan = }")
 
   # Modello per calcolare gli embedding
-  model = SentenceTransformer(
+  # if not embedding_model:
+  embedding_model = SentenceTransformer(
     'all-MiniLM-L6-v2',  # FIXME maybe is better an explicit multilingual one
     device=DEVICE, 
     cache_folder=CACHE_SENTENCE_TRANSFORMERS
@@ -280,7 +302,17 @@ def k_best_chunks_with_phonetic_embeddings(
 
   word_probabilities = np.array([word_dict["probability"] for word_dict in transcribed_dict["result"]])
 
-  for query_idx, query in tqdm(enumerate(queries), desc="Processing Queries", total=len(queries)):
+  # only two calls to phonemize for all needed words
+  all_query_unique_words: list[str] = list(set(word for query in queries for word in clean_filename(query).split()))
+  all_phonemes: list[str] = phonemize(all_query_unique_words, language=espeak_lan, backend=PHONEMIZE_BACKEND)
+  query_word_to_phoneme: dict[str,str] = dict(zip(all_query_unique_words, all_phonemes))
+
+  all_chunk_unique_words: list[str] = list(set(transcription_words))
+  all_chunk_phonemes: list[str] = phonemize(all_chunk_unique_words, language=espeak_lan, backend=PHONEMIZE_BACKEND)
+  chunk_word_to_phoneme: dict[str,str] = dict(zip(all_chunk_unique_words, all_chunk_phonemes))
+
+  # TODO disable tqdm with verbose option, maybe change only position...
+  for query_idx, query in tqdm(enumerate(queries), desc="Processing Queries", total=len(queries), leave=False):
     query = clean_filename(query)
     query_words = query.split()
 
@@ -288,41 +320,25 @@ def k_best_chunks_with_phonetic_embeddings(
 
     contiguous_chunks = [transcription_words[i:i+len_query] for i in range(len_transcription-len_query+1)]
 
-    query_embedding = model.encode(query, convert_to_numpy=True)
-    chunks_embeddings = model.encode([" ".join(chunk) for chunk in contiguous_chunks], convert_to_numpy=True)
+    query_embedding = embedding_model.encode(query, convert_to_numpy=True)
+    chunks_embeddings = embedding_model.encode([" ".join(chunk) for chunk in contiguous_chunks], convert_to_numpy=True)
 
-    similarities = model.similarity(chunks_embeddings, query_embedding).numpy().reshape(-1)
+    similarities = embedding_model.similarity(chunks_embeddings, query_embedding).numpy().reshape(-1)
     # cos_sim = util.cos_sim(chunks_embeddings, query_embedding).numpy()
-
-    # calcola similarità fonetica parola-wise
-    # # FIXME parte troppo lenta...
-    # phonetic_similarities = np.zeros_like(similarities)
-    # for i, chunk in tqdm(enumerate(contiguous_chunks), desc="Phonetic similarities", total=len(contiguous_chunks)):
-    #   cur_sim = np.zeros(len_query)
-    #   for j, (chk_word, query_word) in enumerate(zip(chunk, query_words)):
-    #     chk_phonetic = phonemize(chk_word, language="en-us", backend="espeak")
-    #     query_phonetic = phonemize(query_word, language="en-us", backend="espeak")
-    #     cur_sim[j] = Levenshtein.ratio(chk_phonetic, query_phonetic)
-    #   phonetic_similarities[i] = np.mean(cur_sim)
-    # # FIXME parte troppo lenta...
-
-    # Speedup 1 ---
-    # Supponiamo che query_words e contiguous_chunks siano definiti
-    query_phonetics = {word: phonemize(word, language=espeak_lan, backend="espeak") for word in set(query_words)}
-
-    # Pre-calcoliamo le trascrizioni fonetiche di tutti i chunk
-    chunk_words = {word for chunk in contiguous_chunks for word in chunk}
-    chunk_phonetics = {word: phonemize(word, language=espeak_lan, backend="espeak") for word in chunk_words}
 
     phonetic_similarities = np.zeros(len(contiguous_chunks))
 
-    for i, chunk in tqdm(enumerate(contiguous_chunks), desc="Phonetic similarities", total=len(contiguous_chunks)):
+    for i, chunk in tqdm(enumerate(contiguous_chunks), 
+      desc="Phonetic similarities", 
+      total=len(contiguous_chunks), 
+      disable=not verbose, 
+      leave=False
+    ):
       cur_sim = np.array([
-        Levenshtein.ratio(chunk_phonetics[chk_word], query_phonetics[query_word])
+        Levenshtein.ratio(chunk_word_to_phoneme[chk_word], query_word_to_phoneme[query_word])
         for chk_word, query_word in zip(chunk, query_words)
       ])
       phonetic_similarities[i] = np.mean(cur_sim)
-    # Speedup 1 ---
 
     # medie delle probabilità delle parole trascritte per ogni chunk
     kernel = np.ones(len_query) / len_query
@@ -342,10 +358,11 @@ def k_best_chunks_with_phonetic_embeddings(
     for i, idx in enumerate(top_k_idx):
       transcriptions[query_idx, i] = " ".join(contiguous_chunks[idx])
 
-    print(f"Top {k} chunks for query '{query}':")
-    for i, idx in enumerate(top_k_idx, 1):
-      print(f"  {i:>2}. {' | '.join(contiguous_chunks[idx]):<70}\t sim: {res_sim[idx]:.5f}\t cos sim: {similarities[idx]:.5f}\t phonetic sim: {phonetic_similarities[idx]:.5f}\t  prob: {chunk_mean_probabilities[idx]:.5f}")
-    print()
+    if verbose:
+      print(f"Top {k} chunks for query '{query}':")
+      for i, idx in enumerate(top_k_idx, 1):
+        print(f"  {i:>2}. {' | '.join(contiguous_chunks[idx]):<70}\t sim: {res_sim[idx]:.5f}\t cos sim: {similarities[idx]:.5f}\t phonetic sim: {phonetic_similarities[idx]:.5f}\t  prob: {chunk_mean_probabilities[idx]:.5f}")
+      print()
 
     for k_idx, idx in enumerate(top_k_idx):
       chunk_dict = transcribed_dict["result"][idx: idx+len_query]
@@ -354,6 +371,10 @@ def k_best_chunks_with_phonetic_embeddings(
 
       start_times[query_idx, k_idx] = start_time
       end_times[query_idx, k_idx] = end_time
+
+  # remove tmp dir in env
+  # if tmp_dir:
+    # os.environ.pop("TMPDIR", None)
 
   return start_times, end_times, transcriptions
 
@@ -429,7 +450,6 @@ def full_instruments_ffmpeg_cut(
   if os.path.exists(out_track_name):
     os.remove(out_track_name)
     
-  # os.system(command)
   stream.run()
 
   # st.write(os.path.basename(out_track_name))
@@ -493,41 +513,47 @@ def terminal_pipeline(
 
 
 def jamendo_model_answer_pipeline(
-    track_path: str,
-    lines_csv_path: str, 
-    # lines_df: pd.DataFrame,
-    # queries: list[str],
-    k: int = 1,
+  track_path: str,
+  track_folder_path: str, 
+  # lines_df: pd.DataFrame,
+  # queries: list[str],
+  k: int = 1,
+  spleeter_model: Separator | None = None,
+  # embedding_model: SentenceTransformer | None = None,
+  # espeak_tmp_dir: str | None = None,
 ):
   """
   cfr src/samplit/create_jamendo_model_answers.py
   """
   track_name_no_ext = os.path.basename(os.path.splitext(track_path)[0])
   # lines_df = pd.read_csv(os.path.join(lines, f"{track_name_no_ext}.csv"))
-  lines_csv_filename = os.path.basename(lines_csv_path)
-  
-  lines_df = pd.read_csv(lines_csv_path)
 
   with time_it("Audio Separation..."):
-    track_names: dict[str,str] = separate_all_tracks(track_path)
+    track_names: dict[str,str] = separate_all_tracks(track_path, spleeter_model)
 
   with time_it("Transcription..."):
     transcribed_dict = transcribe_with_timestamps_whisper(track_names["vocals for transcription"])
 
-  queries: list[str] = lines_df["lyrics_line"].tolist()
+  tqdm.write("Chunking...")
+  for lines_csv in tqdm(os.listdir(track_folder_path), desc="Processing Lines", leave=False):
+    lines_csv_path = os.path.join(track_folder_path, lines_csv)
+    lines_csv_filename = os.path.basename(lines_csv_path)
+    lines_df = pd.read_csv(lines_csv_path)
+    queries: list[str] = lines_df["lyrics_line"].tolist()
 
-  with time_it("Chunking..."):
-    # with st.spinner("Chunking..."):
+    # with time_it("Chunking..."):
     start_times, end_times, transcriptions = k_best_chunks_with_phonetic_embeddings(
       track_names["vocals"], 
       queries, 
       k,
-      transcribed_dict
+      transcribed_dict,
+      # embedding_model,
+      # tmp_dir=espeak_tmp_dir,
+      verbose=False,
     )
-
-  lines_df["model_start_time"] = start_times[:,0]
-  lines_df["model_end_time"] = end_times[:,0]
-  lines_df["model_transcription"] = transcriptions[:,0]
-  # out_csv = os.path.join(model_lines,f"{track_name_no_ext}_pipeline.csv")
-  out_csv: str = os.path.join(J_MODEL_LINES, track_name_no_ext, lines_csv_filename)
-  lines_df.to_csv(out_csv, index=False)
+    lines_df["model_start_time"] = start_times[:,0]
+    lines_df["model_end_time"] = end_times[:,0]
+    lines_df["model_transcription"] = transcriptions[:,0]
+    # out_csv = os.path.join(model_lines,f"{track_name_no_ext}_pipeline.csv")
+    out_csv: str = os.path.join(J_MODEL_LINES, track_name_no_ext, lines_csv_filename)
+    lines_df.to_csv(out_csv, index=False)
