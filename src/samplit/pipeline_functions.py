@@ -503,6 +503,11 @@ def full_instruments_ffmpeg_cut(
   str
       The path of the extracted audio file
   """
+  # if transcription model gives start_time >= end_time there is 
+  # something strange, so just swap them and add and subtract epsilon
+  if start_time >= end_time:
+    start_time, end_time = end_time-0.3, start_time+0.3 
+
   query = clean_filename(query)
   track_name: str = os.path.basename(os.path.splitext(track_names["original"])[0])
 
@@ -535,7 +540,13 @@ def full_instruments_ffmpeg_cut(
   if os.path.exists(out_track_name):
     os.remove(out_track_name)
 
-  stream.run()
+  try:
+    stream.run()
+  except Exception as e:
+    print(repr(e))
+    print(f"{start_time = }")
+    print(f"{end_time = }") 
+    input()
 
   # st.write(os.path.basename(out_track_name))
   # st.write(f"time interval : [{start_time},{end_time}]")

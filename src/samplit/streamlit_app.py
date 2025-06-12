@@ -81,7 +81,9 @@ def main() -> None:
     res = f"{int(minutes)}:{seconds:05.2f}"  # Ensures two decimal places
     return tuple(res.split("."))
 
-  st.title("Phonetic-Based Audio Sampling via Source Separation and Transcription")
+  st.title("Samplit")
+  st.subheader("Phonetic-Based Audio Sampling via Source Separation and Transcription")
+  # st.title("Phonetic-Based Audio Sampling via Source Separation and Transcription")
   # st.markdown("### **How It Works:**")
   # with st.expander("How It Works"):
   st.markdown(
@@ -89,8 +91,8 @@ def main() -> None:
     1. **Upload an Audio File:** Choose the audio track to use  
     2. **Enter a Search Query:** Type the specific phrase you want to 
     extract from the audio.  
-    3. **Set the Top-k Best Cuts:** Enter a value to specify how many top 
-    query extractions the model will display.
+    3. **Set the Top-k Best Cuts:** Specify how many extractions (best 
+    cuts) the model will display.
     4. **Select Instruments (Optional):** Pick any specific instruments 
     you'd like to isolate or focus on.  
     5. **Export Results (Optional):** Download the processed audio or 
