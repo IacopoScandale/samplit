@@ -1,7 +1,7 @@
 [project]
 name = "samplit"
 version = "0.2.0"
-requires-python = "== 3.10.11"
+requires-python = ">= 3.10, <3.11"
 description = "Sampling audio from natural language prompts."
 authors = [{ name = "Iacopo Scandale", email = "iacopo.scandale.is@gmail.com" }]
 license = { text = "MIT" }
@@ -15,13 +15,17 @@ dependencies = [
   "torchvision==0.21.0",
   "spleeter==2.4.0",
   "phonemizer==3.3.0",
-  "python-Levenshtein==0.26.1",
+  "python-levenshtein==0.26.1",
   "openai-whisper==20240930",
   "streamlit==1.42.1",
   "transformers==4.49.0",
   "sentence-transformers==3.4.1",
-  "ipykernel==6.29",
+  "ipykernel==6.29.5",
   "pandas==1.5.3",
   "matplotlib==3.10.1",
   "seaborn==0.13.2",
+  "jiwer>=2.2.0",
 ]
+
+[tool.ruff]
+indent-width = 2

@@ -6,3 +6,7 @@ datasets
 .vscode
 .rsyncignore
 prova*
+fine_tuning_whisper.py
+plots/*
+!plots/medium_no_tol_df
+.editorconfig
