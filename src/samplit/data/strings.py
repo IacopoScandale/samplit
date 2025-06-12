@@ -103,7 +103,7 @@ SPLEETER_MODEL_PREPROCESS: str = "spleeter:2stems"
 Use this model only to separate voice
 """
 J_SEPARATED_DIR: str = os.path.join(JAMENDO_DIR, "voice_only")
-if not os.path.exists(J_SEPARATED_DIR):
+if (os.path.exists(JAMENDO_DIR)) and (not os.path.exists(J_SEPARATED_DIR)):
   os.mkdir(J_SEPARATED_DIR)
 TEST_SIZE: float = 0.2
 SEED: int = 42
