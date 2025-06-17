@@ -8,7 +8,7 @@ from jiwer import wer
 
 from data.strings import (
   J_DATAFRAME_CSV,
-  JAMENDO_DIR,
+  J_EVALUATION_DIR,
   PLOTS_FOLDER,
   SNS_PALETTE,
   TITLE_FONTSIZE,
@@ -325,25 +325,24 @@ def plot_average_wer_boxplots_against_query_len(
 
 
 def main() -> None:
-  # TODO hardcoded "my_evaluation_df" and create directly df in specified dir
-  for csv_file in os.listdir(os.path.join(JAMENDO_DIR, "my_evaluation_df")):
-    csv_file = os.path.join(JAMENDO_DIR, "my_evaluation_df", csv_file)
-    print(f"{csv_file = }")
-    # Multilingual: English, French, German, Spanish
-    # plot_start_end_error_against_query_len("start_end_error_against_query_len", csv_file)
-    # plot_average_error_boxplots_against_query_len("average_error_boxplots", csv_file)
-    # plot_average_error_boxplots_against_query_len("average_error_boxplots_log", csv_file, logy=True)
-    # plot_language_errors("language_errors", csv_file)
-    # plot_query_error_boxplots("char_constraint_boxplot", csv_file)
-    # plot_average_wer_boxplots_against_query_len("wer_boxplots", csv_file, logy=False)
+  for csv_file in os.listdir(J_EVALUATION_DIR):
+    csv_path = os.path.join(J_EVALUATION_DIR, csv_file)
+    print(f"{csv_path = }")
+
+    # Multilingual: English + French + German + Spanish
+    plot_start_end_error_against_query_len("start_end_error_against_query_len", csv_file)
+    plot_average_error_boxplots_against_query_len("average_error_boxplots", csv_file)
+    plot_average_error_boxplots_against_query_len("average_error_boxplots_log", csv_file, logy=True)
+    plot_language_errors("language_errors", csv_file)
+    plot_query_error_boxplots("char_constraint_boxplot", csv_file)
+    plot_average_wer_boxplots_against_query_len("wer_boxplots", csv_file, logy=False)
     
     # English only
-    plot_start_end_error_against_query_len("en_start_end_error_against_query_len", csv_file, language="English")
-    plot_average_error_boxplots_against_query_len("en_average_error_boxplots", csv_file, language="English")
-    plot_average_error_boxplots_against_query_len("en_average_error_boxplots_log", csv_file, logy=True, language="English")
-    plot_query_error_boxplots("en_char_constraint_boxplot", csv_file, language="English")
-    plot_average_wer_boxplots_against_query_len("en_wer_boxplots", csv_file, logy=False, language="English")
-
+    plot_start_end_error_against_query_len("en_start_end_error_against_query_len", csv_path, language="English")
+    plot_average_error_boxplots_against_query_len("en_average_error_boxplots", csv_path, language="English")
+    plot_average_error_boxplots_against_query_len("en_average_error_boxplots_log", csv_path, logy=True, language="English")
+    plot_query_error_boxplots("en_char_constraint_boxplot", csv_path, language="English")
+    plot_average_wer_boxplots_against_query_len("en_wer_boxplots", csv_path, logy=False, language="English")
 
 
 if __name__ == "__main__":

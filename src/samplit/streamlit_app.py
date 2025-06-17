@@ -2,10 +2,12 @@ import os
 import zipfile
 
 import streamlit as st
+from phonemizer.backend.espeak.wrapper import EspeakWrapper
 
 from data.strings import (
   DEVICE,
   TRACKS_PATH,
+  ESPEAK_NG_DLL,
 )
 from data.utils import time_it
 from pipeline_functions import (
@@ -15,12 +17,9 @@ from pipeline_functions import (
   transcribe_with_timestamps_whisper,
 )
 
-# FIXME solo per usare espeak-ng con windows: https://bootphon.github.io/phonemizer/install.html
-# TODO download it directly into the folder?
+# espeak-ng windows: https://bootphon.github.io/phonemizer/install.html
 if os.name == "nt":
-  from phonemizer.backend.espeak.wrapper import EspeakWrapper
-
-  EspeakWrapper.set_library("C:\Program Files\eSpeak NG\libespeak-ng.dll")
+  EspeakWrapper.set_library(ESPEAK_NG_DLL)
 
 
 print(f"{DEVICE = }")

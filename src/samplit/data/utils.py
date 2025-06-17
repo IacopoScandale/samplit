@@ -104,7 +104,7 @@ def get_j_lyrics_filepath(track_name: str) -> str:
   return os.path.join(J_LYRICS_DIR, f"{os.path.splitext(track_name)[0]}.txt")
 
 
-def create_jamendo_dataframe() -> None:
+def create_jamendo_dataframe(out_path: str = J_DATAFRAME_CSV) -> None:
   """
   Merges all dataframes in `J_MODEL_LINES` folders
   """
@@ -117,7 +117,8 @@ def create_jamendo_dataframe() -> None:
       dataframes.append(cur_df)
 
   merged_df = pd.concat(dataframes, ignore_index=True)
-  merged_df.to_csv(J_DATAFRAME_CSV, index=False)
+  merged_df.to_csv(out_path, index=False)
+  tqdm.write(f"Created jamendo dataframe at '{out_path}'")
 
 
 def load_jamendo_dataframe(csv_file: str = J_DATAFRAME_CSV) -> pd.DataFrame:

@@ -1,19 +1,19 @@
-"""
-walk in J_CUSTOM_LINES_FOLDER and recreate the same folder structure in
-J_MODEL_LINES with the same files but with model answers
-"""
-
 import os
 
-# import numpy as np
+import numpy as np
 from spleeter.separator import Separator
+from phonemizer.backend.espeak.wrapper import EspeakWrapper
 from tqdm import tqdm
 
 from data.strings import (
   DEVICE,
   J_CUSTOM_LINES_DIR,
+  J_EVALUATION_DIR,
   J_MODEL_LINES,
+  SIM_PARAMS,
   SPLEETER_MODEL_PIPELINE,
+  ESPEAK_NG_DLL,
+  WHISPER_MODEL,
 )
 from data.utils import (
   create_jamendo_dataframe,
@@ -29,47 +29,37 @@ from pipeline_functions import (
 )
 
 
-
-# FIXME
+# espeak-ng windows: https://bootphon.github.io/phonemizer/install.html
 if os.name == "nt":
-  from phonemizer.backend.espeak.wrapper import EspeakWrapper
-
-  EspeakWrapper.set_library("C:\Program Files\eSpeak NG\libespeak-ng.dll")
+  EspeakWrapper.set_library(ESPEAK_NG_DLL)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-# def generate_simplex_grid(step=0.1):
-#   grid = []
-#   for a in np.arange(0, 1 + step, step):
-#     for b in np.arange(0, 1 - a + step, step):
-#       c = 1.0 - a - b
-#       if c < 0 or c > 1:
-#         continue
-#       grid.append((a, b, c))
-#   return grid
-
-
-def main() -> None:
-  # with tempfile.TemporaryDirectory() as tmp_dir:
-  # tmp_dir = None
+def create_model_answers(
+  spleeter_model_name: str = SPLEETER_MODEL_PIPELINE,
+  whisper_model_name: str = WHISPER_MODEL,
+  sim_params: tuple[float, float, float] = SIM_PARAMS,
+) -> None:
+  """
+  walk in J_CUSTOM_LINES_FOLDER and recreate the same folder structure in
+  J_MODEL_LINES with the same files but with model answers
+  """
   print(f"{DEVICE = }")
 
   # load spleeter model once to avoid tensorflow graph errors
   # embedding model must be loaded every time!
-  spleeter_model = Separator(SPLEETER_MODEL_PIPELINE)
+  spleeter_model = Separator(spleeter_model_name)
   separate_all_jamendo_tracks(spleeter_model)
 
   # load whisper model once to avoid torch.OutOfMemoryError
-  whisper_model = load_whisper_model("large")
+  whisper_model = load_whisper_model(whisper_model_name)
   transcribe_all_jamendo_tracks(whisper_model)
   # whisper_model = None
   # bypass: str = "small"
 
-  sim_params: list[float] = [0, 1, 0]
-
   for track_folder in tqdm(
-    os.listdir(J_CUSTOM_LINES_DIR)[40:], desc="Processing Tracks"
+    os.listdir(J_CUSTOM_LINES_DIR)[:], desc="Processing Tracks"
   ):
     tqdm.write(f"track: '{track_folder}'")
     # create same folder in model lines if it does not exists
@@ -95,12 +85,64 @@ def main() -> None:
       sim_params=sim_params,
     )
 
-  print("Done!")
+  tqdm.write("Done!")
+  
 
-  create_jamendo_dataframe()
-  print("Created jamendo dataframe!")
+def generate_grid() -> list[tuple[float, float, float]]:
+  """
+  weights legend:
+  --------------
+  1. embedding similarity
+  2. phonetic similarity
+  3. whisper word probability
+
+  returns:
+  -------
+  ```
+  [(0.0, 0.85, 0.15),
+   (0.1, 0.75, 0.15),
+   (0.2, 0.65, 0.15),
+   (0.3, 0.55, 0.15),
+   (0.4, 0.45, 0.15),
+   (0.5, 0.35, 0.15),
+   (0.6, 0.25, 0.15),
+   (0.7, 0.15, 0.15),
+   (0.8, 0.05, 0.15)]
+   ```
+  """
+  third: float = 0.15
+  step: float = 0.1
+  grid: list[tuple[float,float,float]] = []
+  for first in np.arange(0.0, 0.8 + step, step):
+    first = round(first, 2)
+    second = round(1 - (first + third), 2)
+    grid.append((first, second, third))
+  return grid
+
+
+def main() -> None:
+  for sim_params in generate_grid():
+    if os.name == "posix":
+      os.system("rm -rf datasets/jamendo_dataset/model_lines/*")
+    elif os.name == "nt":
+      os.system("del /q /f datasets\jamendo_dataset\model_lines\*")
+    # else:
+    #   for track_folder in os.listdir(J_MODEL_LINES):
+    #     folder_path: str = os.path.join(J_MODEL_LINES, track_folder)
+    #     for csv_file in os.listdir(folder_path):
+    #       csv_path: str = os.path.join(folder_path, csv_file)
+    #       os.remove(csv_path)
+    #     os.rmdir(folder_path)
+
+    tqdm.write(f"{sim_params = }")
+    create_model_answers(sim_params=sim_params)
+    
+    out_path: str = os.path.join(
+      J_EVALUATION_DIR, 
+      "grid_{}_{}_{}.csv".format(*sim_params)
+    )
+    create_jamendo_dataframe(out_path)
 
 
 if __name__ == "__main__":
-  ...
   main()

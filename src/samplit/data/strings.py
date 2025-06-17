@@ -16,8 +16,13 @@ SPLEETER_MODEL_PIPELINE: str = "spleeter:5stems"
 PLOTS_FOLDER: str = "plots"
 SNS_PALETTE: str = "Set2"
 TITLE_FONTSIZE: int = 16
-SIM_PARAMS: list[float] = [0.35, 0.50, 0.15]
+SIM_PARAMS: tuple[float] = (0.35, 0.50, 0.15)
+ESPEAK_NG_DLL: str = "C:\Program Files\eSpeak NG\libespeak-ng.dll"
+"""
+windows full path of `libespeak-ng.dll` file.
 
+default: `C:\Program Files\eSpeak NG\libespeak-ng.dll`
+"""
 
 # create folders
 if not os.path.exists(TRACKS_PATH):
@@ -81,6 +86,10 @@ J_DATAFRAME_CSV: str = os.path.join(JAMENDO_DIR, "jamendo_final_df.csv")
 path to the jamendo dataframe with all info and model answers, ready to
 make plots
 """
+J_EVALUATION_DIR: str = os.path.join(JAMENDO_DIR, "my_evaluation_df")
+"""
+path to the folder containing
+"""
 # create jamendo custom folders only if dataset folder is present
 if os.path.exists(J_LINES_DIR):
   if not os.path.exists(J_TEMP_CUTS_DIR):
@@ -91,6 +100,8 @@ if os.path.exists(J_LINES_DIR):
     os.mkdir(J_CUSTOM_LINES_DIR)
   if not os.path.exists(J_MODEL_LINES):
     os.mkdir(J_MODEL_LINES)
+  if not os.path.exists(J_EVALUATION_DIR):
+    os.mkdir(J_EVALUATION_DIR)
 
 
 MAX_CHAR_NUM: int = 1_000_000
