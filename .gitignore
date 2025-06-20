@@ -9,3 +9,4 @@ prova*
 fine_tuning_whisper.py
 plots/*
 .editorconfig
+out.html

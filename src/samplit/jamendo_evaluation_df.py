@@ -87,9 +87,9 @@ def get_models_df(num_words: int, language: str | None = None) -> pd.DataFrame:
 
 
 def main() -> None:
-  df: pd.DataFrame = get_models_df(num_words=5)
+  df: pd.DataFrame = get_models_df(num_words=8)
   df.drop(columns=["num_words"], inplace=True)
-  # df.to_html("out.html")
+  df.to_html("out.html")
   # print(df)
 
   # latex_table = df.to_latex(

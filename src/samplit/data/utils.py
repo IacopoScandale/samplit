@@ -4,6 +4,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 
+import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -11,6 +12,7 @@ from tqdm import tqdm
 from data.strings import (
   J_CUSTOM_LINES_DIR,
   J_DATAFRAME_CSV,
+  J_LYRICS_CSV,
   J_LYRICS_DIR,
   J_MODEL_LINES,
   J_MP3_DIR,
@@ -151,3 +153,56 @@ def print_tmp_dir_size():
     tqdm.write(output)
   elif os.name == "nt":
     tqdm.write(f"check manually tmp dir size at '{tempfile.gettempdir()}'")
+
+
+def get_language_tracks(language: str) -> set[str]:
+  """
+  get all track names of a specific language
+  """
+  df: pd.DataFrame = pd.read_csv(J_LYRICS_CSV)
+  df = df[df["Language"] == language]
+  return set(df["Filepath"])
+
+
+def clear_model_lines_dir() -> None:
+  """
+  clear all files generated in `J_MODEL_LINES` folder from 
+  `jamendo_create_model_answers.py`
+  """
+  for track_folder in os.listdir(J_MODEL_LINES):
+    folder_path: str = os.path.join(J_MODEL_LINES, track_folder)
+    for csv_file in os.listdir(folder_path):
+      csv_path: str = os.path.join(folder_path, csv_file)
+      os.remove(csv_path)
+    os.rmdir(folder_path)
+
+def generate_grid() -> list[tuple[float, float, float]]:
+  """
+  weights legend:
+  --------------
+  1. embedding similarity
+  2. phonetic similarity
+  3. whisper word probability
+
+  returns:
+  -------
+  ```
+  [(0.00, 0.85, 0.15),
+   (0.20, 0.65, 0.15),
+   (0.10, 0.75, 0.15),
+   (0.30, 0.55, 0.15),
+   (0.40, 0.45, 0.15),
+   (0.50, 0.35, 0.15),
+   (0.60, 0.25, 0.15),
+   (0.70, 0.15, 0.15),
+   (0.80, 0.05, 0.15)]
+  ```
+  """
+  third: float = 0.15
+  step: float = 0.1
+  grid: list[tuple[float, float, float]] = []
+  for first in np.arange(0.0, 0.8 + step, step):
+    first = round(first, 2)
+    second = round(1 - (first + third), 2)
+    grid.append((first, second, third))
+  return grid

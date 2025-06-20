@@ -1,9 +1,9 @@
 import os
 
-import numpy as np
 from spleeter.separator import Separator
 from phonemizer.backend.espeak.wrapper import EspeakWrapper
 from tqdm import tqdm
+from whisper import Whisper
 
 from data.strings import (
   DEVICE,
@@ -16,8 +16,11 @@ from data.strings import (
   WHISPER_MODEL,
 )
 from data.utils import (
+  clear_model_lines_dir,
   create_jamendo_dataframe,
+  generate_grid,
   get_jamendo_track_filepath,
+  get_language_tracks,
   print_cuda_mem,
   print_tmp_dir_size,
 )
@@ -37,9 +40,12 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def create_model_answers(
-  spleeter_model_name: str = SPLEETER_MODEL_PIPELINE,
-  whisper_model_name: str = WHISPER_MODEL,
+  spleeter_model: Separator,
+  whisper_model: Whisper,
+  # spleeter_model_name: str = SPLEETER_MODEL_PIPELINE,
+  # whisper_model_name: str = WHISPER_MODEL,
   sim_params: tuple[float, float, float] = SIM_PARAMS,
+  language: str | None = None,
 ) -> None:
   """
   walk in J_CUSTOM_LINES_FOLDER and recreate the same folder structure in
@@ -47,20 +53,20 @@ def create_model_answers(
   """
   print(f"{DEVICE = }")
 
-  # load spleeter model once to avoid tensorflow graph errors
-  # embedding model must be loaded every time!
-  spleeter_model = Separator(spleeter_model_name)
-  separate_all_jamendo_tracks(spleeter_model)
+  if language:
+    language_tracks: set[str] = get_language_tracks(language)
+    tracks: list[str] = [
+      track
+      for track in os.listdir(J_CUSTOM_LINES_DIR)
+      if f"{track}.mp3" in language_tracks
+    ]
+  else:
+    tracks: list[str] = os.listdir(J_CUSTOM_LINES_DIR)
 
-  # load whisper model once to avoid torch.OutOfMemoryError
-  whisper_model = load_whisper_model(whisper_model_name)
-  transcribe_all_jamendo_tracks(whisper_model)
-  # whisper_model = None
-  # bypass: str = "small"
+  # print(tracks)
+  # input()
 
-  for track_folder in tqdm(
-    os.listdir(J_CUSTOM_LINES_DIR)[:], desc="Processing Tracks"
-  ):
+  for track_folder in tqdm(tracks[:], desc="Processing Tracks"):
     tqdm.write(f"track: '{track_folder}'")
     # create same folder in model lines if it does not exists
     model_lines_track_folder = os.path.join(J_MODEL_LINES, track_folder)
@@ -86,61 +92,39 @@ def create_model_answers(
     )
 
   tqdm.write("Done!")
-  
-
-def generate_grid() -> list[tuple[float, float, float]]:
-  """
-  weights legend:
-  --------------
-  1. embedding similarity
-  2. phonetic similarity
-  3. whisper word probability
-
-  returns:
-  -------
-  ```
-  [(0.0, 0.85, 0.15),
-   (0.1, 0.75, 0.15),
-   (0.2, 0.65, 0.15),
-   (0.3, 0.55, 0.15),
-   (0.4, 0.45, 0.15),
-   (0.5, 0.35, 0.15),
-   (0.6, 0.25, 0.15),
-   (0.7, 0.15, 0.15),
-   (0.8, 0.05, 0.15)]
-   ```
-  """
-  third: float = 0.15
-  step: float = 0.1
-  grid: list[tuple[float,float,float]] = []
-  for first in np.arange(0.0, 0.8 + step, step):
-    first = round(first, 2)
-    second = round(1 - (first + third), 2)
-    grid.append((first, second, third))
-  return grid
 
 
 def main() -> None:
-  for sim_params in generate_grid():
-    if os.name == "posix":
-      os.system("rm -rf datasets/jamendo_dataset/model_lines/*")
-    elif os.name == "nt":
-      os.system("del /q /f datasets\jamendo_dataset\model_lines\*")
-    # else:
-    #   for track_folder in os.listdir(J_MODEL_LINES):
-    #     folder_path: str = os.path.join(J_MODEL_LINES, track_folder)
-    #     for csv_file in os.listdir(folder_path):
-    #       csv_path: str = os.path.join(folder_path, csv_file)
-    #       os.remove(csv_path)
-    #     os.rmdir(folder_path)
+  # load spleeter model once to avoid tensorflow graph errors
+  # embedding model must be loaded every time!
+  tqdm.write(f"Loading Spleeter Model '{SPLEETER_MODEL_PIPELINE}'")
+  spleeter_model = Separator(SPLEETER_MODEL_PIPELINE)
+  # separate_all_jamendo_tracks(spleeter_model)
+
+  # load whisper model once to avoid torch.OutOfMemoryError
+  tqdm.write(f"Loading Whisper Model '{WHISPER_MODEL}'")
+  whisper_model = load_whisper_model(WHISPER_MODEL)
+  # transcribe_all_jamendo_tracks(whisper_model)
+  # whisper_model = None
+  # bypass: str = "large"
+
+  for sim_params in tqdm(generate_grid(), desc="Grid Search"):
+    out_path: str = os.path.join(
+      J_EVALUATION_DIR, "grid_{:.2f}_{:.2f}_{:.2f}.csv".format(*sim_params)
+    )
+    if os.path.exists(out_path):
+      continue
+
+    clear_model_lines_dir()
 
     tqdm.write(f"{sim_params = }")
-    create_model_answers(sim_params=sim_params)
-    
-    out_path: str = os.path.join(
-      J_EVALUATION_DIR, 
-      "grid_{}_{}_{}.csv".format(*sim_params)
+    create_model_answers(
+      spleeter_model,
+      whisper_model,
+      sim_params=sim_params, 
+      language="English",
     )
+
     create_jamendo_dataframe(out_path)
 
 

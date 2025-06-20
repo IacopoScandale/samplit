@@ -372,7 +372,7 @@ def main() -> None:
 
             with col2:
               if st.button(
-                "Refresh", key=f"refresh{track_idx}", use_container_width=True
+                "Apply Changes", key=f"refresh{track_idx}", use_container_width=True
               ):
                 # replace audio with last pipeline function
                 new_start_time = start_time + start_offset
