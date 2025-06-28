@@ -1,3 +1,7 @@
+"""
+This script contains all the constants of the project, including
+strings, paths, hyperparameters and more
+"""
 import os
 
 from torch.cuda import is_available
@@ -15,7 +19,9 @@ PHONEMIZE_BACKEND: str = "espeak"
 SPLEETER_MODEL_PIPELINE: str = "spleeter:5stems"
 PLOTS_FOLDER: str = "plots"
 SNS_PALETTE: str = "Set2"
-TITLE_FONTSIZE: int = 16
+TITLE_FONTSIZE: int = 22
+TITLE_PAD: int = 20
+TEXT_FONTSIZE: int = 16
 SIM_PARAMS: tuple[float] = (0.35, 0.50, 0.15)
 ESPEAK_NG_DLL: str = "C:\Program Files\eSpeak NG\libespeak-ng.dll"
 """
@@ -88,7 +94,7 @@ make plots
 """
 J_EVALUATION_DIR: str = os.path.join(JAMENDO_DIR, "my_evaluation_df")
 """
-path to the folder containing
+path to the folder containing evaluation csv files
 """
 # create jamendo custom folders only if dataset folder is present
 if os.path.exists(J_LINES_DIR):
@@ -227,3 +233,7 @@ WHISPER_TO_ESPEAK_LAN: dict[str, str] = {
   "su": "id",  # sudanese to indonesian
   "yue": "yue",
 }
+"""
+Semi-automatically aligned language mapping from the Whisper detected 
+language to the corresponding eSpeak-NG language.
+"""

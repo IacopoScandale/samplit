@@ -1,3 +1,7 @@
+"""
+This script was used to extract pipeline metrics data as tables from
+evaluation CSV files into the folder at `J_EVALUATION_DIR` path
+"""
 import os
 from typing import Any
 
@@ -5,18 +9,7 @@ import pandas as pd
 from jiwer import wer
 
 from data.strings import J_EVALUATION_DIR
-from data.utils import load_jamendo_dataframe
-
-
-def iou(row):
-  inter_start = max(row["start_time"], row["model_start_time"])
-  union_start = min(row["start_time"], row["model_start_time"])
-  inter_end = min(row["end_time"], row["model_end_time"])
-  union_end = max(row["end_time"], row["model_end_time"])
-
-  inter = max(0, inter_end - inter_start)
-  union = union_end - union_start
-  return inter / union if union > 0 else 0
+from data.utils import load_jamendo_dataframe, iou
 
 
 def get_models_df(num_words: int, language: str | None = None) -> pd.DataFrame:
@@ -40,7 +33,7 @@ def get_models_df(num_words: int, language: str | None = None) -> pd.DataFrame:
 
   for csv_file in os.listdir(J_EVALUATION_DIR):
     # blacklist files starting with "_"
-    if csv_file.startswith("_"):
+    if csv_file.startswith("_"): #\ or not csv_file.startswith("grid"):
       continue
 
     csv_path = os.path.join(J_EVALUATION_DIR, csv_file)
@@ -87,14 +80,16 @@ def get_models_df(num_words: int, language: str | None = None) -> pd.DataFrame:
 
 
 def main() -> None:
-  df: pd.DataFrame = get_models_df(num_words=8)
+  df: pd.DataFrame = get_models_df(num_words=10)
   df.drop(columns=["num_words"], inplace=True)
-  df.to_html("out.html")
+  df.sort_values(by="Name", inplace=True)
   # print(df)
+
+  # df.to_html("out.html", index=False)
 
   # latex_table = df.to_latex(
   #   index=False,
-  #   float_format="%.3f",
+  #   float_format="%.4f",
   #   caption="Model Metrics",
   #   label="tab:model_metrics",
   #   column_format="lrrrrrr",
@@ -104,4 +99,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+  pass
   main()

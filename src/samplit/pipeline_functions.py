@@ -1,3 +1,7 @@
+"""
+This script contains all the samplit pipeline functions to make the 
+evaluation scripts and the streamlit application script work.
+"""
 import json
 import os
 import re
@@ -371,7 +375,6 @@ def k_best_chunks_with_phonetic_embeddings(
   # case when "" is in the transcription
   # if len(all_chunk_unique_words) > len(all_chunk_phonemes):
 
-  # TODO disable tqdm with verbose option, maybe change only position...
   for query_idx, query in tqdm(
     enumerate(queries), desc="Processing Queries", total=len(queries), leave=False
   ):
@@ -386,7 +389,7 @@ def k_best_chunks_with_phonetic_embeddings(
     ]
     # bad case when there are more words in the query then in the transcription
     if len(contiguous_chunks) == 0:
-      tqdm.write("bad case :(")
+      # tqdm.write("bad case")
       contiguous_chunks = [transcription_words.copy()]
 
     query_embedding = embedding_model.encode(query, convert_to_numpy=True)

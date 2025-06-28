@@ -1,3 +1,7 @@
+"""
+This script contains the streamlit web app. Use the following command to
+run: `streamlit run src/samplit/streamlit_app.py`
+"""
 import os
 import zipfile
 
@@ -122,10 +126,14 @@ def main() -> None:
   st_blank_line()
   with st.container(border=True):
     st.subheader("2. Enter words to extract:")
-    query = st.text_input("Type the query you wish to find in the audio file:")
+    query = st.text_input(
+      "Type the query you wish to find in the audio file:",
+      help="You cannot leave blank this field",
+      placeholder="Enter some words to continue",
+    )
 
     # avoid if block and stop execution
-    if not query:
+    if not query.strip():
       st.stop()
 
   st_blank_line()
@@ -257,8 +265,11 @@ def main() -> None:
       st.session_state.rerun_once = True
 
     for track_idx in range(k):
-      track_path = st.session_state.top_extracted_cuts[track_idx]
       transcription = st.session_state.transcriptions[track_idx]
+      # case where k is bigger than the available extracted tracks
+      if not transcription:
+        break
+      track_path = st.session_state.top_extracted_cuts[track_idx]
       start_time, end_time = st.session_state.start_end_times[track_idx]
 
       track_name = os.path.basename(track_path)

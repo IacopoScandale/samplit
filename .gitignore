@@ -8,5 +8,6 @@ datasets
 prova*
 fine_tuning_whisper.py
 plots/*
+!plots/medium_best
+!plots/samplit_pipeline_diagram.png
 .editorconfig
-out.html

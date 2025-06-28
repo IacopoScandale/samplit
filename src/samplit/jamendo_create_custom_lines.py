@@ -1,3 +1,8 @@
+"""
+This script creates custom random unique lines from the 79 tracks of the
+JamendoLyrics dataset. The resulting CSV files are contained into the
+`J_CUSTOM_LINES_DIR` folder.
+"""
 import os
 import random
 import sys

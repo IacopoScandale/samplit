@@ -1,3 +1,10 @@
+"""
+This script was used to recreate the same folder structure of custom 
+JamendoLyrics lines contained in `J_CUSTOM_LINES_FOLDER` directory 
+(ground truth data), but also adding the pipeline answers (predicted 
+start and end times and predicted custom line transcription) into the 
+`J_MODEL_LINES` folder.
+"""
 import os
 
 from spleeter.separator import Separator
@@ -96,15 +103,15 @@ def create_model_answers(
 
 def main() -> None:
   # load spleeter model once to avoid tensorflow graph errors
-  # embedding model must be loaded every time!
+  # obs: embedding model must be loaded every time!
   tqdm.write(f"Loading Spleeter Model '{SPLEETER_MODEL_PIPELINE}'")
   spleeter_model = Separator(SPLEETER_MODEL_PIPELINE)
-  # separate_all_jamendo_tracks(spleeter_model)
+  separate_all_jamendo_tracks(spleeter_model)
 
   # load whisper model once to avoid torch.OutOfMemoryError
   tqdm.write(f"Loading Whisper Model '{WHISPER_MODEL}'")
   whisper_model = load_whisper_model(WHISPER_MODEL)
-  # transcribe_all_jamendo_tracks(whisper_model)
+  transcribe_all_jamendo_tracks(whisper_model)
   # whisper_model = None
   # bypass: str = "large"
 

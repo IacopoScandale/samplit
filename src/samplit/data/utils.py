@@ -1,3 +1,6 @@
+"""
+This script contains all the utility function used in the project
+"""
 import os
 import subprocess
 import tempfile
@@ -206,3 +209,14 @@ def generate_grid() -> list[tuple[float, float, float]]:
     second = round(1 - (first + third), 2)
     grid.append((first, second, third))
   return grid
+
+
+def iou(row: pd.Series):
+  inter_start = max(row["start_time"], row["model_start_time"])
+  union_start = min(row["start_time"], row["model_start_time"])
+  inter_end = min(row["end_time"], row["model_end_time"])
+  union_end = max(row["end_time"], row["model_end_time"])
+
+  inter = max(0, inter_end - inter_start)
+  union = union_end - union_start
+  return inter / union if union > 0 else 0
