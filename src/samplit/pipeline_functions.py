@@ -183,12 +183,7 @@ def transcribe_with_timestamps_whisper(
   Returns
   -------
   dict
-      Un dizionario contenente la trascrizione completa e i dettagli delle parole con timestamp.
-
-  Examples
-  --------
-  >>> transcribe_with_timestamps_vosk("path/to/audio.wav")
-      {'result': [...], 'text': 'trascrizione completa'}
+      transcription with word-level timestamps and probabilities
   """
   # check if transcription already exists in JSON_SAVES and save time
   if _bypass:
@@ -358,11 +353,11 @@ def k_best_chunks_with_phonetic_embeddings(
   all_query_unique_words: list[str] = list(
     set(word for query in queries for word in clean_filename(query).split())
   )
-  all_phonemes: list[str] = phonemize(
+  all_query_phonemes: list[str] = phonemize(
     all_query_unique_words, language=espeak_lan, backend=PHONEMIZE_BACKEND
   )
   query_word_to_phoneme: dict[str, str] = dict(
-    zip(all_query_unique_words, all_phonemes)
+    zip(all_query_unique_words, all_query_phonemes)
   )
 
   all_chunk_unique_words: list[str] = list(set(transcription_words))
