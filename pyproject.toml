@@ -24,7 +24,9 @@ dependencies = [
   "pandas==1.5.3",
   "matplotlib==3.10.1",
   "seaborn==0.13.2",
-  "jiwer>=2.2.0",
+  "jiwer==2.2.0",
+  "click==7.1.2",
+  "typer==0.3.2",
 ]
 
 [tool.ruff]
