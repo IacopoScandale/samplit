@@ -30,11 +30,11 @@ Official implementation of my Bachelor's thesis project at Sapienza University o
 > Scienze Matematiche per l’Intelligenza Artificiale
 
 ### Thesis Abstract
-This project explores the task of automatic audio sampling by proposing a pipeline that combines source separation and speech transcription. The project integrates state-of-the-art models for the main processing stages and introduces an original chunking phase based on phonetic similarity metrics.
+This paper explores the task of automatic audio sampling by proposing a pipeline that combines source separation and speech transcription. The project integrates state-of-the-art models for the main processing stages and introduces an original chunking phase based on phonetic similarity metrics.
 
-The proposed approach allows the extraction of audio segments from a sung music track, given only the target words as input.
+The presented approach allows the extraction of audio segments from a vocal music track, given only the target words as input.
 
-The results demonstrate good performances and highlight the potential for application in creative and audio production contexts.
+The results demonstrate good performance and highlight the potential for application in creative and audio production contexts.
 
 
 ## Streamlit Web App
